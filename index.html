@@ -100,7 +100,7 @@
       const ver = Array.from(arr, x => chars.charAt(x % 62)).join('');
       localStorage.setItem('sp_v', ver);
       const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ver));
-      const chal = btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
+      const chal = btoa(String.fromCharCode(...new Uint8Array(hash))).split('=').join('').split('+').join('-').split('/').join('_');
       location.href = 'https://spotify.com?' + new URLSearchParams({
         response_type: 'code', client_id: cid, scope: 'user-read-playback-state user-modify-playback-state',
         code_challenge_method: 'S256', code_challenge: chal, redirect_uri: REDIRECT
