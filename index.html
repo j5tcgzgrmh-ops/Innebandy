@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
@@ -46,8 +46,8 @@
       <button class="btn btn-sm" style="background:#334155" onclick="getDevices()">Uppdatera</button>
     </div>
     <div class="tabs" id="tabs"></div>
-    <div class="grid" id="grid"></div>
-    <div id="add-box" class="card hidden" style="margin-top:14px; border:1px solid #3b82f6;">
+    <div class="grid" id="grid"></div>  
+   <div id="add-box" class="card hidden" style="margin-top:14px; border:1px solid #3b82f6;">
       <h3 style="margin-top:0">Ny låtknapp</h3>
       <input type="text" id="p-name" placeholder="Namn (t.ex. Mål! - Bro Hymn)" />
       <input type="text" id="p-url" placeholder="Spotify-länk till låt..." />
@@ -91,12 +91,13 @@
       { id: 3, t: 'Avblåsning - Seven Nation', u: 'spotify:track:3dPQuX8Gs42Y7b454ybpMR', ms: 0, c: 'Avblåsning', bg: '#2563eb' },
       { id: 4, t: 'Utvisning - Bad Boys', u: 'spotify:track:0M955bMOoilikPXwKLYpoi', ms: 18000, c: 'Utvisning', bg: '#dc2626' }
     ];
-    async function login() {
+  async function login() {
       const cid = document.getElementById('cid').value.trim();
       if (!cid) return alert('Fyll i Client ID!');
       localStorage.setItem('sp_c', cid);
       const arr = crypto.getRandomValues(new Uint8Array(64));
-      const ver = Array.from(arr, x => 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[x % 62]).join('');
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const ver = Array.from(arr, x => chars.charAt(x % 62)).join('');
       localStorage.setItem('sp_v', ver);
       const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ver));
       const chal = btoa(String.fromCharCode(...new Uint8Array(hash))).replace(/=/g,'').replace(/\+/g,'-').replace(/\//g,'_');
@@ -118,7 +119,7 @@
         token = d.access_token; localStorage.setItem('sp_t', token);
         if (d.refresh_token) localStorage.setItem('sp_r', d.refresh_token);
         history.replaceState({}, '', REDIRECT); startApp();
-      } else alert('Fel vid inloggning. Kontrollera Client ID och Redirect URI.');
+      } else alert('Fel vid inloggning: ' + (d.error_description || 'Kontrollera Client ID och Redirect URI.'));
     }
     async function api(path, opt = {}) {
       let r = await fetch('https://spotify.com' + path, {
@@ -141,7 +142,8 @@
       const r = await api('/me/player/devices');
       if (!r.ok) return;
       const d = await r.json();
-      const dev = (d.devices || []).find(x => x.is_active) || (d.devices || [])[0];
+      const list = d.devices || new Array();
+      const dev = list.find(x => x.is_active) || list.at(0);
       if (dev) { devId = dev.id; document.getElementById('status').innerHTML = 'Redo: <b>' + dev.name + '</b>'; }
       else document.getElementById('status').innerText = 'Öppna Spotify-appen och spela 1 sek!';
     }
@@ -151,14 +153,16 @@
       if (!devId) await getDevices();
       const q = devId ? '?device_id=' + devId : '';
       await api('/me/player/volume?volume_percent=100' + (devId ? '&device_id=' + devId : ''), { method: 'PUT' });
-      const r = await api('/me/player/play' + q, { method: 'PUT', body: JSON.stringify({ uris: [p.u], position_ms: p.ms }) });
+      const urisList = new Array(p.u);
+      const r = await api('/me/player/play' + q, { method: 'PUT', body: JSON.stringify({ uris: urisList, position_ms: p.ms }) });
       if (r.status === 404) { alert('Öppna Spotify-appen och tryck play/paus en gång!'); getDevices(); }
     }
     async function stopNow() { fading = false; await api('/me/player/pause' + (devId ? '?device_id=' + devId : ''), { method: 'PUT' }); }
     async function fadeOut() {
       if (fading) return; fading = true;
       const q = devId ? '&device_id=' + devId : '';
-      for (const v of) {
+      const levels = '80,60,40,20,5'.split(',');
+      for (const v of levels) {
         if (!fading) return;
         await api('/me/player/volume?volume_percent=' + v + q, { method: 'PUT' });
         await new Promise(r => setTimeout(r, 250));
@@ -172,9 +176,10 @@
       const url = document.getElementById('p-url').value.trim();
       const tm = document.getElementById('p-time').value.trim();
       const m = url.match(/track\/([a-zA-Z0-9]+)/);
-      const u = url.startsWith('spotify:track:') ? url : (m ? 'spotify:track:' + m[1] : '');
+      const u = url.startsWith('spotify:track:') ? url : (m ? 'spotify:track:' + m.at(1) : '');
       if (!t || !u) return alert('Fyll i namn och giltig Spotify-länk!');
-      const ms = tm.includes(':') ? ((+tm.split(':')[0]||0)*60 + (+tm.split(':')[1]||0))*1000 : (+tm||0)*1000;
+      const parts = tm.split(':');
+      const ms = tm.includes(':') ? ((+parts.at(0)||0)*60 + (+parts.at(1)||0))*1000 : (+tm||0)*1000;
       pads.push({ id: Date.now(), t, u, ms, c: document.getElementById('p-cat').value, bg: document.getElementById('p-col').value });
       save(); toggleAdd();
       document.getElementById('p-name').value = ''; document.getElementById('p-url').value = ''; document.getElementById('p-time').value = '';
@@ -182,7 +187,8 @@
     function delPad(e, id) { e.stopPropagation(); if (confirm('Ta bort?')) { pads = pads.filter(x => x.id !== id); save(); } }
     function save() { localStorage.setItem('mdj_p', JSON.stringify(pads)); render(); }
     function render() {
-      document.getElementById('tabs').innerHTML = ['Alla','Mål','Avblåsning','Utvisning','Paus'].map(c =>
+      const cats = 'Alla,Mål,Avblåsning,Utvisning,Paus'.split(',');
+      document.getElementById('tabs').innerHTML = cats.map(c =>
         `<button class="tab ${filter===c?'active':''}" onclick="filter='${c}';render()">${c}</button>`).join('');
       const list = filter === 'Alla' ? pads : pads.filter(x => x.c === filter);
       document.getElementById('grid').innerHTML = list.map(p => {
