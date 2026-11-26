@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <title>MatchDJ Soundboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #22c55e;
+      --danger: #ef4444;
+      --primary: #3b82f6;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); padding: 16px; padding-bottom: 120px; }
+    h1, h2, h3 { margin: 0 0 12px 0; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .status-bar { background: var(--card); padding: 10px 14px; border-radius: 12px; font-size: 13px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .btn { border: none; border-radius: 12px; padding: 12px 16px; font-weight: 700; font-size: 15px; cursor: pointer; color: white; transition: transform 0.1s; }
+    .btn:active { transform: scale(0.97); }
+    .btn-primary { background: var(--primary); }
+    .btn-green { background: var(--accent); color: #052e16; }
+    .btn-danger { background: var(--danger); }
+    .btn-small { padding: 6px 10px; font-size: 12px; border-radius: 8px; }
+    .card { background: var(--card); padding: 16px; border-radius: 16px; margin-bottom: 16px; }
+    input, select { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 15px; margin-bottom: 10px; }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+    .tab { background: var(--card); color: var(--muted); border: none; padding: 8px 14px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
+    .tab.active { background: var(--primary); color: white; }
+    .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .pad { border: none; border-radius: 14px; padding: 16px 12px; color: white; text-align: left; font-weight: 700; font-size: 15px; display: flex; flex-direction: column; justify-content: space-between; min-height: 85px; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+    .pad:active { transform: scale(0.96); }
+    .pad small { font-weight: 400; opacity: 0.85; font-size: 12px; margin-top: 6px; }
+    .pad .del-btn { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.35); border: none; color: white; border-radius: 50%; width: 22px; height: 22px; font-size: 12px; display: none; }
+    body.edit-mode .pad .del-btn { display: block; }
+    .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); padding: 12px 16px 24px 16px; display: flex; gap: 10px; border-top: 1px solid #334155; }
+    .bottom-bar .btn { flex: 1; padding: 16px; font-size: 16px; }
+    .hidden { display: none !important; }
+    .row { display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+
+  <div id="login-view" class="card">
+    <h2>MatchDJ Setup</h2>
+    <p style="color: var(--muted); font-size: 14px; line-height: 1.4;">
+      Klistra in ditt <strong>Client ID</strong> från Spotify Developer Dashboard. Se till att din webbadress är tillagd som Redirect URI i Spotify.
+    </p>
+    <input type="text" id="client-id-input" placeholder="Klistra in Spotify Client ID..." />
+    <button class="btn btn-green" style="width: 100%;" onclick="startLogin()">Logga in med Spotify</button>
+  </div>
+
+  <div id="app-view" class="hidden">
+    <div class="header">
+      <h2>MatchDJ</h2>
+      <div>
+        <button class="btn btn-primary btn-small" onclick="toggleModal()">+ Ny knapp</button>
+        <button class="btn btn-small" style="background:#334155;" onclick="toggleEdit()">Ändra</button>
+      </div>
+    </div>
+
+    <div class="status-bar">
+      <span id="device-status">Söker enhet...</span>
+      <button class="btn btn-small" style="background:#334155;" onclick="fetchDevices()">Uppdatera</button>
+    </div>
+
+    <div class="tabs" id="category-tabs"></div>
+    <div class="grid" id="pads-grid"></div>
+
+    <div id="add-modal" class="card hidden" style="margin-top: 16px; border: 1px solid var(--primary);">
+      <h3>Lägg till ny låtknapp</h3>
+      <input type="text" id="pad-title" placeholder="Knappnamn (t.ex. Mål! - Bro Hymn)" />
+      <input type="text" id="pad-uri" placeholder="Spotify-länk (https://spotify.com...)" />
+      <div class="row">
+        <input type="text" id="pad-time" placeholder="Starttid (t.ex. 1:15 eller 75)" />
+        <select id="pad-cat">
+          <option value="Mål">Mål</option>
+          <option value="Avblåsning">Avblåsning</option>
+          <option value="Utvisning">Utvisning</option>
+          <option value="Paus">Paus / Uppvärmning</option>
+        </select>
+      </div>
+      <div class="row">
+        <select id="pad-color">
+          <option value="#16a34a">Grön (Mål)</option>
+          <option value="#2563eb">Blå (Avblåsning)</option>
+          <option value="#dc2626">Röd (Utvisning)</option>
+          <option value="#d97706">Orange (Hype)</option>
+          <option value="#7c3aed">Lila (Paus)</option>
+        </select>
+      </div>
+      <div class="row">
+        <button class="btn btn-green" style="flex:1;" onclick="addPad()">Spara knapp</button>
+        <button class="btn" style="background:#475569;" onclick="toggleModal()">Avbryt</button>
+      </div>
+    </div>
+
+    <div style="margin-top: 30px; text-align: center;">
+      <button class="btn btn-small" style="background:#334155;" onclick="exportData()">Kopiera backup</button>
+      <button class="btn btn-small" style="background:#334155;" onclick="importData()">Klistra in backup</button>
+      <button class="btn btn-small" style="background:#334155;" onclick="logout()">Logga ut</button>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn" style="background:#f59e0b; color:#000;" onclick="fadeOutAndPause()">FADE OUT</button>
+      <button class="btn btn-danger" onclick="pausePlayback()">STOPP DIREKT</button>
+    </div>
+  </div>
+
+  <script>
+    const REDIRECT_URI = window.location.origin + window.location.pathname;
+    const SCOPES = 'user-read-playback-state user-modify-playback-state';
+    let accessToken = localStorage.getItem('sp_token') || '';
+    let activeDeviceId = '';
+    let currentFilter = 'Alla';
+    let isFading = false;
+
+    const defaultPads = [
+      { id: 1, title: 'Mål! - Chelsea Dagger', uri: 'spotify:track:1bDbXo80ubd43S2c08oT8r', startMs: 49000, cat: 'Mål', color: '#16a34a' },
+      { id: 2, title: 'Mål! - Bro Hymn', uri: 'spotify:track:7129iqBafaphfc3WPCGC0L', startMs: 74000, cat: 'Mål', color: '#16a34a' },
+      { id: 3, title: 'Avblåsning - Seven Nation Army', uri: 'spotify:track:3dPQuX8Gs42Y7b454ybpMR', startMs: 0, cat: 'Avblåsning', color: '#2563eb' },
+      { id: 4, title: 'Utvisning - Bad Boys', uri: 'spotify:track:0M955bMOoilikPXwKLYpoi', startMs: 18000, cat: 'Utvisning', color: '#dc2626' }
+    ];
+
+    let pads = JSON.parse(localStorage.getItem('matchdj_pads')) || defaultPads;
+
+    function generateRandomString(length) {
+      const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+      const values = crypto.getRandomValues(new Uint8Array(length));
+      return values.reduce((acc, x) => acc + possible[x % possible.length], '');
+    }
+
+    async function sha256(plain) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(plain);
+      return window.crypto.subtle.digest('SHA-256', data);
+    }
+
+    function base64encode(input) {
+      return btoa(String.fromCharCode(...new Uint8Array(input)))
+        .replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    }
+
+    async function startLogin() {
+      const clientId = document.getElementById('client-id-input').value.trim();
+      if (!clientId) return alert('Fyll i ditt Client ID först!');
+      localStorage.setItem('sp_client_id', clientId);
+
+      const codeVerifier = generateRandomString(64);
+      localStorage.setItem('sp_verifier', codeVerifier);
+      const hashed = await sha256(codeVerifier);
+      const codeChallenge = base64encode(hashed);
+
+      const authUrl = new URL("https://spotify.com");
+      authUrl.search = new URLSearchParams({
+        response_type: 'code',
+        client_id: clientId,
+        scope: SCOPES,
+        code_challenge_method: 'S256',
+        code_challenge: codeChallenge,
+        redirect_uri: REDIRECT_URI,
+      }).toString();
+
+      window.location.href = authUrl.toString();
+    }
+
+    async function exchangeCodeForToken(code) {
+      const clientId = localStorage.getItem('sp_client_id');
+      const codeVerifier = localStorage.getItem('sp_verifier');
+
+      const res = await fetch('https://spotify.com', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          client_id: clientId,
+          grant_type: 'authorization_code',
+          code: code,
+          redirect_uri: REDIRECT_URI,
+          code_verifier: codeVerifier,
+        }),
+      });
+      const data = await res.json();
+      if (data.access_token) {
+        accessToken = data.access_token;
+        localStorage.setItem('sp_token', accessToken);
+        if (data.refresh_token) localStorage.setItem('sp_refresh', data.refresh_token);
+        window.history.replaceState({}, document.title, REDIRECT_URI);
+        initApp();
+      } else {
+        alert('Inloggningen misslyckades. Kontrollera ditt Client ID och Redirect URI.');
+      }
+    }
+
+    async function refreshAccessToken() {
