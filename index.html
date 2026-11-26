@@ -1,209 +1,120 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>MatchDJ</title>
   <style>
-    body { margin: 0; background: #0f172a; color: #f8fafc; font-family: -apple-system, sans-serif; padding: 16px; padding-bottom: 110px; }
+    body { margin: 0; background: #0f172a; color: #f8fafc; font-family: -apple-system, sans-serif; padding: 16px; padding-bottom: 40px; }
     .card { background: #1e293b; padding: 16px; border-radius: 16px; margin-bottom: 14px; }
     .btn { border: none; border-radius: 12px; padding: 12px 16px; font-weight: 700; font-size: 15px; color: white; cursor: pointer; }
     .btn-green { background: #22c55e; color: #052e16; }
     .btn-blue { background: #3b82f6; }
-    .btn-red { background: #ef4444; }
-    .btn-sm { padding: 7px 11px; font-size: 13px; border-radius: 8px; }
+    .btn-sm { padding: 8px 12px; font-size: 13px; border-radius: 8px; }
     input, select { width: 100%; box-sizing: border-box; padding: 12px; border-radius: 10px; border: 1px solid #334155; background: #0f172a; color: white; font-size: 15px; margin-bottom: 10px; }
-    .tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; }
-    .tab { background: #1e293b; color: #94a3b8; border: none; padding: 8px 14px; border-radius: 20px; font-weight: 600; }
+    .tabs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 14px; padding-bottom: 4px; }
+    .tab { background: #1e293b; color: #94a3b8; border: none; padding: 8px 14px; border-radius: 20px; font-weight: 600; white-space: nowrap; }
     .tab.active { background: #3b82f6; color: white; }
     .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-    .pad { border: none; border-radius: 14px; padding: 14px 12px; color: white; text-align: left; font-weight: 700; font-size: 15px; min-height: 80px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+    .pad { border: none; border-radius: 14px; padding: 16px 12px; color: white; text-align: left; font-weight: 700; font-size: 15px; min-height: 85px; display: flex; flex-direction: column; justify-content: space-between; position: relative; box-shadow: 0 4px 6px rgba(0,0,0,0.25); }
+    .pad:active { transform: scale(0.96); }
     .pad small { font-weight: 400; opacity: 0.85; font-size: 12px; margin-top: 6px; }
-    .del { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.4); border: none; color: white; border-radius: 50%; width: 22px; height: 22px; display: none; }
+    .del { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.45); border: none; color: white; border-radius: 50%; width: 24px; height: 24px; display: none; }
     body.edit .del { display: block; }
-    .bar { position: fixed; bottom: 0; left: 0; right: 0; background: #0f172a; padding: 12px 16px 24px; display: flex; gap: 10px; border-top: 1px solid #334155; }
-    .bar .btn { flex: 1; padding: 16px; }
     .hidden { display: none !important; }
   </style>
 </head>
 <body>
-  <div id="login-view" class="card">
-    <h2>MatchDJ Setup</h2>
-    <input type="text" id="cid" placeholder="Klistra in Spotify Client ID..." />
-    <button class="btn btn-green" style="width:100%" onclick="login()">Logga in med Spotify</button>
-  </div>
-  <div id="app-view" class="hidden">
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-      <h2 style="margin:0">MatchDJ</h2>
-      <div>
-        <button class="btn btn-blue btn-sm" onclick="toggleAdd()">+ Ny</button>
-        <button class="btn btn-sm" style="background:#334155" onclick="document.body.classList.toggle('edit')">Ändra</button>
-      </div>
-    </div>
-    <div class="card" style="padding:10px 14px; display:flex; justify-content:space-between; align-items:center; font-size:13px;">
-      <span id="status">Söker enhet...</span>
-      <button class="btn btn-sm" style="background:#334155" onclick="getDevices()">Uppdatera</button>
-    </div>
-    <div class="tabs" id="tabs"></div>
-    <div class="grid" id="grid"></div>  
-   <div id="add-box" class="card hidden" style="margin-top:14px; border:1px solid #3b82f6;">
-      <h3 style="margin-top:0">Ny låtknapp</h3>
-      <input type="text" id="p-name" placeholder="Namn (t.ex. Mål! - Bro Hymn)" />
-      <input type="text" id="p-url" placeholder="Spotify-länk till låt..." />
-      <input type="text" id="p-time" placeholder="Starttid (t.ex. 1:15 eller 75)" />
-      <select id="p-cat">
-        <option value="Mål">Mål</option>
-        <option value="Avblåsning">Avblåsning</option>
-        <option value="Utvisning">Utvisning</option>
-        <option value="Paus">Paus</option>
-      </select>
-      <select id="p-col">
-        <option value="#16a34a">Grön (Mål)</option>
-        <option value="#2563eb">Blå (Avblåsning)</option>
-        <option value="#dc2626">Röd (Utvisning)</option>
-        <option value="#d97706">Orange (Hype)</option>
-      </select>
-      <div style="display:flex; gap:8px;">
-        <button class="btn btn-green" style="flex:1" onclick="addPad()">Spara</button>
-        <button class="btn" style="background:#475569" onclick="toggleAdd()">Avbryt</button>
-      </div>
-    </div>
-    <div style="margin-top:24px; text-align:center;">
-      <button class="btn btn-sm" style="background:#334155" onclick="backup()">Kopiera backup</button>
-      <button class="btn btn-sm" style="background:#334155" onclick="restore()">Återställ</button>
-      <button class="btn btn-sm" style="background:#334155" onclick="logout()">Logga ut</button>
-    </div>
-    <div class="bar">
-      <button class="btn" style="background:#f59e0b; color:#000" onclick="fadeOut()">FADE OUT</button>
-      <button class="btn btn-red" onclick="stopNow()">STOPP</button>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+    <h2 style="margin:0">MatchDJ</h2>
+    <div>
+      <button class="btn btn-blue btn-sm" onclick="toggleAdd()">+ Ny knapp</button>
+      <button class="btn btn-sm" style="background:#334155" onclick="document.body.classList.toggle('edit')">Ändra</button>
     </div>
   </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div class="grid" id="grid"></div>
+  <div id="add-box" class="card hidden" style="margin-top:16px; border:1px solid #3b82f6;">
+    <h3 style="margin-top:0">Lägg till låtknapp</h3>
+    <input type="text" id="p-name" placeholder="Namn (t.ex. Mål! - Bro Hymn)" />
+    <input type="text" id="p-url" placeholder="Klistra in Spotify-länk..." />
+    <select id="p-cat">
+      <option value="Mål">Mål</option>
+      <option value="Avblåsning">Avblåsning</option>
+      <option value="Utvisning">Utvisning</option>
+      <option value="Paus">Paus / Uppvärmning</option>
+    </select>
+    <select id="p-col">
+      <option value="#16a34a">Grön (Mål)</option>
+      <option value="#2563eb">Blå (Avblåsning)</option>
+      <option value="#dc2626">Röd (Utvisning)</option>
+      <option value="#d97706">Orange (Hype)</option>
+      <option value="#7c3aed">Lila (Paus)</option>
+    </select>
+    <div style="display:flex; gap:8px;">
+      <button class="btn btn-green" style="flex:1" onclick="addPad()">Spara knapp</button>
+      <button class="btn" style="background:#475569" onclick="toggleAdd()">Avbryt</button>
+    </div>
+  </div>
+
+  <div style="margin-top:28px; text-align:center;">
+    <button class="btn btn-sm" style="background:#334155" onclick="backup()">Kopiera backup</button>
+    <button class="btn btn-sm" style="background:#334155" onclick="restore()">Återställ backup</button>
+  </div>
+
   <script>
-    const REDIRECT = window.location.origin + window.location.pathname;
-    let token = localStorage.getItem('sp_t') || '';
-    let devId = '';
     let filter = 'Alla';
-    let fading = false;
-    let pads = JSON.parse(localStorage.getItem('mdj_p')) || [
-      { id: 1, t: 'Mål! - Chelsea Dagger', u: 'spotify:track:1bDbXo80ubd43S2c08oT8r', ms: 49000, c: 'Mål', bg: '#16a34a' },
-      { id: 2, t: 'Mål! - Bro Hymn', u: 'spotify:track:7129iqBafaphfc3WPCGC0L', ms: 74000, c: 'Mål', bg: '#16a34a' },
-      { id: 3, t: 'Avblåsning - Seven Nation', u: 'spotify:track:3dPQuX8Gs42Y7b454ybpMR', ms: 0, c: 'Avblåsning', bg: '#2563eb' },
-      { id: 4, t: 'Utvisning - Bad Boys', u: 'spotify:track:0M955bMOoilikPXwKLYpoi', ms: 18000, c: 'Utvisning', bg: '#dc2626' }
-    ];
-  async function login() {
-      const cid = document.getElementById('cid').value.trim();
-      if (!cid) return alert('Fyll i Client ID!');
-      localStorage.setItem('sp_c', cid);
-      const arr = crypto.getRandomValues(new Uint8Array(64));
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-      const ver = Array.from(arr, x => chars.charAt(x % 62)).join('');
-      localStorage.setItem('sp_v', ver);
-      const hash = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(ver));
-      const chal = btoa(String.fromCharCode(...new Uint8Array(hash))).split('=').join('').split('+').join('-').split('/').join('_');
-      location.href = 'https://spotify.com?' + new URLSearchParams({
-        response_type: 'code', client_id: cid, scope: 'user-read-playback-state user-modify-playback-state',
-        code_challenge_method: 'S256', code_challenge: chal, redirect_uri: REDIRECT
-      });
+    const defaults = new Array(
+      { id: 1, t: 'Mål! - Chelsea Dagger', u: 'https://spotify.com', c: 'Mål', bg: '#16a34a' },
+      { id: 2, t: 'Mål! - Bro Hymn', u: 'https://spotify.com', c: 'Mål', bg: '#16a34a' },
+      { id: 3, t: 'Avblåsning - Seven Nation', u: 'https://spotify.com', c: 'Avblåsning', bg: '#2563eb' },
+      { id: 4, t: 'Utvisning - Bad Boys', u: 'https://spotify.com', c: 'Utvisning', bg: '#dc2626' }
+    );
+    let pads = JSON.parse(localStorage.getItem('mdj_direct')) || defaults;
+
+    function play(id) {
+      const p = pads.find(x => x.id === id);
+      if (p) window.location.href = p.u;
     }
-    async function getToken(code) {
-      const res = await fetch('https://spotify.com', {
-        method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({
-          client_id: localStorage.getItem('sp_c'), grant_type: 'authorization_code',
-          code, redirect_uri: REDIRECT, code_verifier: localStorage.getItem('sp_v')
-        })
-      });
-      const d = await res.json();
-      if (d.access_token) {
-        token = d.access_token; localStorage.setItem('sp_t', token);
-        if (d.refresh_token) localStorage.setItem('sp_r', d.refresh_token);
-        history.replaceState({}, '', REDIRECT); startApp();
-      } else alert('Fel vid inloggning: ' + (d.error_description || 'Kontrollera Client ID och Redirect URI.'));
-    }
-    async function api(path, opt = {}) {
-      let r = await fetch('https://spotify.com' + path, {
-        ...opt, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
-      });
-      if (r.status === 401 && localStorage.getItem('sp_r')) {
-        const rr = await fetch('https://spotify.com', {
-          method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: new URLSearchParams({ client_id: localStorage.getItem('sp_c'), grant_type: 'refresh_token', refresh_token: localStorage.getItem('sp_r') })
-        });
-        const dd = await rr.json();
-        if (dd.access_token) {
-          token = dd.access_token; localStorage.setItem('sp_t', token);
-          r = await fetch('https://spotify.com' + path, { ...opt, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } });
-        }
-      }
-      return r;
-    }
-    async function getDevices() {
-      const r = await api('/me/player/devices');
-      if (!r.ok) return;
-      const d = await r.json();
-      const list = d.devices || new Array();
-      const dev = list.find(x => x.is_active) || list.at(0);
-      if (dev) { devId = dev.id; document.getElementById('status').innerHTML = 'Redo: <b>' + dev.name + '</b>'; }
-      else document.getElementById('status').innerText = 'Öppna Spotify-appen och spela 1 sek!';
-    }
-    async function play(i) {
-      fading = false;
-      const p = pads.find(x => x.id === i);
-      if (!devId) await getDevices();
-      const q = devId ? '?device_id=' + devId : '';
-      await api('/me/player/volume?volume_percent=100' + (devId ? '&device_id=' + devId : ''), { method: 'PUT' });
-      const urisList = new Array(p.u);
-      const r = await api('/me/player/play' + q, { method: 'PUT', body: JSON.stringify({ uris: urisList, position_ms: p.ms }) });
-      if (r.status === 404) { alert('Öppna Spotify-appen och tryck play/paus en gång!'); getDevices(); }
-    }
-    async function stopNow() { fading = false; await api('/me/player/pause' + (devId ? '?device_id=' + devId : ''), { method: 'PUT' }); }
-    async function fadeOut() {
-      if (fading) return; fading = true;
-      const q = devId ? '&device_id=' + devId : '';
-      const levels = '80,60,40,20,5'.split(',');
-      for (const v of levels) {
-        if (!fading) return;
-        await api('/me/player/volume?volume_percent=' + v + q, { method: 'PUT' });
-        await new Promise(r => setTimeout(r, 250));
-      }
-      if (fading) { await stopNow(); await api('/me/player/volume?volume_percent=100' + q, { method: 'PUT' }); }
-      fading = false;
-    }
+
     function toggleAdd() { document.getElementById('add-box').classList.toggle('hidden'); }
+
     function addPad() {
       const t = document.getElementById('p-name').value.trim();
       const url = document.getElementById('p-url').value.trim();
-      const tm = document.getElementById('p-time').value.trim();
       const m = url.match(/track\/([a-zA-Z0-9]+)/);
-      const u = url.startsWith('spotify:track:') ? url : (m ? 'spotify:track:' + m.at(1) : '');
-      if (!t || !u) return alert('Fyll i namn och giltig Spotify-länk!');
-      const parts = tm.split(':');
-      const ms = tm.includes(':') ? ((+parts.at(0)||0)*60 + (+parts.at(1)||0))*1000 : (+tm||0)*1000;
-      pads.push({ id: Date.now(), t, u, ms, c: document.getElementById('p-cat').value, bg: document.getElementById('p-col').value });
+      const u = m ? 'https://spotify.com' + m.at(1) : (url.startsWith('http') ? url : '');
+      if (!t || !u) return alert('Fyll i både namn och en giltig Spotify-länk!');
+      pads.push({ id: Date.now(), t, u, c: document.getElementById('p-cat').value, bg: document.getElementById('p-col').value });
       save(); toggleAdd();
-      document.getElementById('p-name').value = ''; document.getElementById('p-url').value = ''; document.getElementById('p-time').value = '';
+      document.getElementById('p-name').value = ''; document.getElementById('p-url').value = '';
     }
-    function delPad(e, id) { e.stopPropagation(); if (confirm('Ta bort?')) { pads = pads.filter(x => x.id !== id); save(); } }
-    function save() { localStorage.setItem('mdj_p', JSON.stringify(pads)); render(); }
+
+    function delPad(e, id) {
+      e.stopPropagation();
+      if (confirm('Ta bort denna knapp?')) { pads = pads.filter(x => x.id !== id); save(); }
+    }
+
+    function save() { localStorage.setItem('mdj_direct', JSON.stringify(pads)); render(); }
+
     function render() {
       const cats = 'Alla,Mål,Avblåsning,Utvisning,Paus'.split(',');
       document.getElementById('tabs').innerHTML = cats.map(c =>
         `<button class="tab ${filter===c?'active':''}" onclick="filter='${c}';render()">${c}</button>`).join('');
       const list = filter === 'Alla' ? pads : pads.filter(x => x.c === filter);
-      document.getElementById('grid').innerHTML = list.map(p => {
-        const s = Math.floor(p.ms/1000), min = Math.floor(s/60), sec = s%60;
-        return `<button class="pad" style="background:${p.bg}" onclick="play(${p.id})">
+      document.getElementById('grid').innerHTML = list.map(p =>
+        `<button class="pad" style="background:${p.bg}" onclick="play(${p.id})">
           <span class="del" onclick="delPad(event,${p.id})">✕</span>
-          <span>${p.t}</span><small>${p.c} • ${min}:${sec<10?'0':''}${sec}</small></button>`;
-      }).join('');
+          <span>${p.t}</span><small>${p.c}</small></button>`).join('');
     }
+
     function backup() { navigator.clipboard.writeText(JSON.stringify(pads)); alert('Backup kopierad!'); }
     function restore() { try { const d = JSON.parse(prompt('Klistra in backup:')); if (Array.isArray(d)) { pads = d; save(); } } catch(e) { alert('Ogiltig text'); } }
-    function logout() { localStorage.removeItem('sp_t'); localStorage.removeItem('sp_r'); location.reload(); }
-    function startApp() { document.getElementById('login-view').classList.add('hidden'); document.getElementById('app-view').classList.remove('hidden'); render(); getDevices(); }
-    const code = new URLSearchParams(location.search).get('code');
-    if (code) getToken(code); else if (token) startApp(); else if (localStorage.getItem('sp_c')) document.getElementById('cid').value = localStorage.getItem('sp_c');
+
+    render();
   </script>
 </body>
 </html>
